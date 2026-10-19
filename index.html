@@ -79,7 +79,7 @@ function fitLetter(){const l=document.querySelector('.letter'),side=envelope.clo
 function showWish(){ $("greetingTitle").textContent="Chúc mừng ngày 20/10 🌷";$("greetingText").textContent=wishes[index%wishes.length];fitLetter()}
 function openEnvelope(){opened=!opened;envelope.classList.toggle("open",opened);envelope.closest(".letter-side").classList.toggle("is-open",opened);fitLetter();if(opened){showWish();bloom(18);toast("Lá thư đã mở, chúc bạn 20/10 vui vẻ 💗");startMusic()}else{stopMusic()}$("tapHint").textContent=opened?"CHẠM LẠI PHONG THƯ ĐỂ ĐÓNG":"CHẠM VÀO PHONG THƯ ĐỂ MỞ";updateMusicBtn()}
 /* ===== Nhạc nền piano: chỉ phát khi mở phong bì ===== */
-const MUSIC_SRC="assets/piano.mp3",MUSIC_VOLUME=0.18;
+const MUSIC_SRC="piano.mp3",MUSIC_VOLUME=0.18;
 const audio=new Audio();audio.preload="none";audio.loop=true;audio.volume=0;audio.src=MUSIC_SRC;
 let musicWanted=true,musicOn=false,musicBroken=false,fadeTimer;
 function fadeTo(target,ms,done){clearInterval(fadeTimer);const from=audio.volume,steps=20;let n=0;fadeTimer=setInterval(()=>{n++;audio.volume=Math.max(0,Math.min(1,from+(target-from)*(n/steps)));if(n>=steps){clearInterval(fadeTimer);if(done)done()}},ms/steps)}
