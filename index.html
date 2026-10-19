@@ -25,11 +25,19 @@ h1{font-size:clamp(2.35rem,7vw,5.2rem);line-height:1.03;letter-spacing:-.055em;m
 /* FIX: lá thư không bị phong bì che chữ */
 .envelope{transform-style:flat}
 .letter-side{transition:padding-top .8s cubic-bezier(.2,.8,.2,1)}
+.letter-side{padding-bottom:34px}
 .letter-side.is-open{padding-top:var(--lh,300px)}
 .letter{transition:bottom .8s cubic-bezier(.2,.8,.2,1),height .8s cubic-bezier(.2,.8,.2,1);overflow:hidden}
-.envelope.open .letter{transform:none;bottom:calc(100% - 22px);padding-bottom:40px}
+.envelope.open .letter{transform:none;bottom:calc(100% - 22px);padding-bottom:40px;z-index:7}
 .letter .wish-body{max-height:none;overflow:visible}
 .letter{box-sizing:border-box}
+
+/* Nút nhạc nền */
+.music-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-color:#ffb4d755;background:linear-gradient(100deg,#ffb2d72e,#c7a8ff26);color:#fff0fb}
+.music-btn[aria-pressed="true"]{background:linear-gradient(100deg,#ffb2d7,#ffe4b6);color:#291027;border-color:transparent;box-shadow:0 8px 28px #ff78b733}
+.music-btn.is-idle{opacity:.72}
+.music-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.music-btn:focus-visible{outline:2px solid #ffd5e9;outline-offset:3px}
 </style>
 </head>
 <body>
@@ -45,13 +53,14 @@ h1{font-size:clamp(2.35rem,7vw,5.2rem);line-height:1.03;letter-spacing:-.055em;m
 </section>
 <section class="stage" id="gift">
 <div class="letter-side"><div class="glow"></div><div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Mở phong thư">
-<div class="env-back"></div><div class="letter"><div class="mini">A note for you</div><h3 id="greetingTitle">Chúc mừng 20/10 🌷</h3><p class="wish-body" id="greetingText">Chúc bạn luôn rạng rỡ theo cách của riêng mình.</p></div><div class="env-front"></div><div class="env-flap"></div><div class="seal">♥</div></div><div class="tap-hint">CHẠM VÀO PHONG THƯ ĐỂ MỞ</div></div>
+<div class="env-back"></div><div class="letter"><div class="mini">A note for you</div><h3 id="greetingTitle">Chúc mừng 20/10 🌷</h3><p class="wish-body" id="greetingText">Chúc bạn luôn rạng rỡ theo cách của riêng mình.</p></div><div class="env-front"></div><div class="env-flap"></div><div class="seal">♥</div></div><div class="tap-hint" id="tapHint">CHẠM VÀO PHONG THƯ ĐỂ MỞ</div></div>
 <div class="letter-instructions">
   <div class="section-tag">A little surprise</div>
   <h2>Chạm để mở lá thư 💌</h2>
   <p class="muted">Phong thư sẽ mở ra và lá thư bật lên cùng lời chúc 20/10 dành cho tất cả các bạn nữ.</p>
   <button class="btn btn-ghost" id="another">Đổi lời chúc ✨</button>
   <button class="btn btn-ghost" id="copy">Sao chép lời chúc</button>
+  <button class="btn music-btn is-idle" id="musicBtn" type="button" aria-pressed="false">🎵 Mở thư để nghe nhạc</button>
 </div>
 </section>
 </main>
@@ -66,9 +75,21 @@ const wishes=[
 "Chúc bạn luôn mạnh mẽ khi cần, dịu dàng khi muốn và nhớ rằng bạn không cần phải hoàn hảo để trở nên đặc biệt. Mong tuổi học trò của chúng ta có thật nhiều khoảnh khắc đáng nhớ! 🌸"
 ];
 const $=id=>document.getElementById(id);const envelope=$("envelope");let opened=false,index=0,toastTimer;
-function fitLetter(){const l=document.querySelector('.letter'),side=envelope.closest('.letter-side');if(!opened){l.style.height='';side.style.removeProperty('--lh');return}l.style.height='auto';const h=l.offsetHeight;l.style.height=h+'px';side.style.setProperty('--lh',(h-22+16)+'px')}
+function fitLetter(){const l=document.querySelector('.letter'),side=envelope.closest('.letter-side');if(!opened){l.style.height='';side.style.removeProperty('--lh');return}const g=l.cloneNode(true);g.removeAttribute('id');g.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));g.style.cssText='visibility:hidden;pointer-events:none;transition:none;height:auto;top:0;bottom:auto;left:8%;width:84%';envelope.appendChild(g);const h=g.offsetHeight;g.remove();l.style.height=h+'px';side.style.setProperty('--lh',(h-22+16)+'px')}
 function showWish(){ $("greetingTitle").textContent="Chúc mừng ngày 20/10 🌷";$("greetingText").textContent=wishes[index%wishes.length];fitLetter()}
-function openEnvelope(){opened=!opened;envelope.classList.toggle("open",opened);envelope.closest(".letter-side").classList.toggle("is-open",opened);fitLetter();if(opened){showWish();bloom(18);toast("Lá thư đã mở, chúc bạn 20/10 vui vẻ 💗")}}
+function openEnvelope(){opened=!opened;envelope.classList.toggle("open",opened);envelope.closest(".letter-side").classList.toggle("is-open",opened);fitLetter();if(opened){showWish();bloom(18);toast("Lá thư đã mở, chúc bạn 20/10 vui vẻ 💗");startMusic()}else{stopMusic()}$("tapHint").textContent=opened?"CHẠM LẠI PHONG THƯ ĐỂ ĐÓNG":"CHẠM VÀO PHONG THƯ ĐỂ MỞ";updateMusicBtn()}
+/* ===== Nhạc nền piano: chỉ phát khi mở phong bì ===== */
+const MUSIC_SRC="assets/piano.mp3",MUSIC_VOLUME=0.18;
+const audio=new Audio();audio.preload="none";audio.loop=true;audio.volume=0;audio.src=MUSIC_SRC;
+let musicWanted=true,musicOn=false,musicBroken=false,fadeTimer;
+function fadeTo(target,ms,done){clearInterval(fadeTimer);const from=audio.volume,steps=20;let n=0;fadeTimer=setInterval(()=>{n++;audio.volume=Math.max(0,Math.min(1,from+(target-from)*(n/steps)));if(n>=steps){clearInterval(fadeTimer);if(done)done()}},ms/steps)}
+function updateMusicBtn(){const b=$("musicBtn");b.classList.toggle("is-idle",!opened&&!musicBroken);b.disabled=musicBroken;b.setAttribute("aria-pressed",String(musicOn));b.textContent=musicBroken?"🎵 Chưa có file nhạc":!opened?"🎵 Mở thư để nghe nhạc":musicOn?"🔊 Tắt nhạc":"🔇 Bật nhạc"}
+async function startMusic(){if(!opened||!musicWanted||musicBroken){updateMusicBtn();return}try{await audio.play();musicOn=true;fadeTo(MUSIC_VOLUME,1500)}catch(e){musicOn=false;if(e&&e.name==="NotAllowedError"){toast("Chạm nút 🔇 để bật nhạc nền nhé 🎵")}else if(e&&e.name!=="AbortError"){musicBroken=true}}updateMusicBtn()}
+function stopMusic(){musicOn=false;updateMusicBtn();fadeTo(0,700,()=>{if(!musicOn)audio.pause()})}
+audio.addEventListener("error",()=>{musicBroken=true;musicOn=false;audio.pause();updateMusicBtn()});
+$("musicBtn").addEventListener("click",()=>{if(musicBroken)return;if(!opened){toast("Hãy mở phong bì để nghe nhạc nhé 💌");return}if(musicOn){musicWanted=false;stopMusic()}else{musicWanted=true;startMusic()}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(musicOn)audio.pause()}else if(musicOn&&opened){audio.play().catch(()=>{})}});
+updateMusicBtn();
 function bloom(amount=12){const symbols=["🌸","💗","🌷","✿","✨","💕","🌼"];for(let i=0;i<amount;i++){const p=document.createElement("span");p.className="particle";p.textContent=symbols[Math.floor(Math.random()*symbols.length)];p.style.left=(Math.random()*100)+"vw";p.style.fontSize=(14+Math.random()*19)+"px";p.style.animationDuration=(5+Math.random()*6)+"s";p.style.setProperty("--drift",((Math.random()-.5)*220)+"px");p.style.setProperty("--spin",((Math.random()-.5)*300)+"deg");document.body.appendChild(p);setTimeout(()=>p.remove(),12000)}}
 function toast(message){const t=$("toast");t.textContent=message;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2400)}
 $("openTop").addEventListener("click",()=>{if(!opened)openEnvelope();$("gift").scrollIntoView({behavior:"smooth",block:"center"})});
